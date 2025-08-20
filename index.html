@@ -2,63 +2,234 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>句子跟讀挑戰</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>1-3 句子跟讀挑戰</title>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: auto; text-align: center; padding: 30px 15px; }
-    #question-box { margin: 20px 0; }
-    #user-audio.hidden { display: none; }
-    button { margin: 5px; padding: 10px 15px; }
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: auto;
+      text-align: center;
+      padding: 30px 15px;
+    }
+    #logo {
+      width: 150px;
+      max-width: 80%;
+      margin-bottom: 10px;
+    }
+    #game-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    #question-number {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    #question-selector {
+      margin: 20px 0;
+    }
+
+    /* 統一按鈕大小 */
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background-color: #f0f0f0;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #4a90e2;
+      color: #fff;
+    }
+
+    /* 題目選擇按鈕 (維持圓形，但大小統一) */
+    .selector-btn {
+      width: 40px;
+      height: 40px;
+      margin: 5px;
+      padding: 0;
+      border-radius: 50%;
+    }
+
+    .hidden {
+      visibility: hidden;
+    }
+    audio {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      display: block;
+    }
+
+    /* 備註字體大小統一 */
+    .note,
+    .practice-hint,
+    .pro-mode-hint {
+      font-size: 14px;
+      color: #888;
+      margin: 5px 0;
+    }
+
+    /* 題目與關鍵字 */
+    .question-text {
+      font-size: 20px;
+      margin-bottom: 10px;
+      font-weight: bold; /* 題目粗體 */
+    }
+    .keywords {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    #question-controls {
+      margin-top: 20px;
+    }
+
+    /* 分成三行，按鈕水平排列 */
+    .audio-player-container,
+    .user-audio-container {
+      margin: 10px 0;
+    }
+
+    .record-btns {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px 0;
+    }
+
+    /* 高手模式提示置中（位於按鈕與播放器之間） */
+    .pro-mode-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .pro-mode-hint {
+      margin: 0;
+      padding: 6px 10px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
-  <h1 id="title">1-1 句子跟讀挑戰</h1>
-  <div id="question-box">
-    <p id="question-text"></p>
-    <p id="keywords"></p>
-    <p><span id="current-number"></span> / <span id="total-number"></span></p>
-    <audio id="audio-player" controls></audio>
-  </div>
-  <audio id="user-audio" controls class="hidden"></audio>
-  <div>
-    <button id="start-btn">🎤 開始錄音</button>
-    <button id="stop-btn" disabled>⏹ 停止錄音</button>
-    <button id="toggle-pro-mode">切換 Pro 模式</button>
+  <img id="logo" src="logo.png" alt="Logo">
+  <div id="game-title">1-3 句子跟讀挑戰</div>
+  <div id="question-number">第 <span id="current-number">1</span> 題 / 共 10 題</div>
+  <div id="question-selector"><strong>題目選擇：</strong></div>
+
+  <div id="question-text" class="question-text"></div>
+
+  <div class="practice-hint">進階練習：看著關鍵字，試著說出句子</div>
+  <div id="keywords" class="keywords"></div>
+
+  <div class="pro-mode-area">
+    <button id="toggle-pro-mode">高手模式</button>
+    <div class="pro-mode-hint">進入高手模式後 題目與關鍵字都會隱藏</div>
   </div>
 
+  <div id="question-controls">
+    <div class="audio-player-container">
+      <audio id="audio-player" controls></audio>
+    </div>
+
+    <div class="record-btns">
+      <button id="start-btn">開始錄音</button>
+      <button id="stop-btn" disabled>停止錄音</button>
+    </div>
+
+    <div class="user-audio-container">
+      <audio id="user-audio" controls class="hidden"></audio>
+    </div>
+  </div>
+
+  <!-- 引入 recorder.js（請確保 recorder.js 在同目錄） -->
+  <script src="recorder.js"></script>
+
   <script>
+    // 原始題庫（保留你先前提供的 10 題）
     const questions = [
-      { text: "아침에 보통 커피를 마시거나 빵을 먹어요.", keywords: "커피, 빵", audio: "audio1.mp3" },
-      { text: "주말에 시간이 있으면 보통 집에서 청소하거나 음악을 들어요.", keywords: "주말, 청소, 음악", audio: "audio2.mp3" }
+      { audio: "audio/21010301S.mp3", text: "아침에 보통 커피를 마시거나 빵을 먹어요.", keywords: "아침, 커피, 빵" },
+      { audio: "audio/21010302S.mp3", text: "주말에 시간이 있으면 보통 집에서 청소하거나 음악을 들어요.", keywords: "주말, 청소, 음악" },
+      { audio: "audio/21010303S.mp3", text: "스트레스를 받으면 운동을 하거나 맛있는 음식을 먹어요.", keywords: "스트레스, 운동, 음식" },
+      { audio: "audio/21010304S.mp3", text: "졸리면 커피를 마시거나 잠깐 쉬세요.", keywords: "졸리다, 커피, 쉬다" },
+      { audio: "audio/21010305S.mp3", text: "비가 오면 택시를 타거나 집에 있어요.", keywords: "비, 택시, 집" },
+      { audio: "audio/21010306S.mp3", text: "회의가 끝나고 점심을 먹거나 커피를 마실까요?", keywords: "회의, 점심, 커피" },
+      { audio: "audio/21010307S.mp3", text: "이 문제를 혼자 해결하거나 선생님께 물어보세요.", keywords: "문제, 해결, 선생님" },
+      { audio: "audio/21010308S.mp3", text: "한국어를 배우고 한국 회사에 취직하거나 번역사가 되고 싶어요.", keywords: "한국어, 회사, 번역사" },
+      { audio: "audio/21010309S.mp3", text: "쉬는 날에 보통 집에서 빨래하거나 도서관에 가서 숙제해요.", keywords: "쉬는 날, 빨래, 도서관" },
+      { audio: "audio/21010310S.mp3", text: "일이 많으면 동료한테 부탁하거나 야근해요.", keywords: "일, 동료, 야근" }
     ];
 
     let currentQuestion = 0;
     let isProMode = false;
+    let recorder = null;
+    let stream = null;
+    let isRecording = false;
 
+    // DOM
     const questionText = document.getElementById("question-text");
     const keywordsDiv = document.getElementById("keywords");
     const currentNumberSpan = document.getElementById("current-number");
-    const totalNumberSpan = document.getElementById("total-number");
     const audioPlayer = document.getElementById("audio-player");
     const userAudio = document.getElementById("user-audio");
     const startBtn = document.getElementById("start-btn");
     const stopBtn = document.getElementById("stop-btn");
     const proModeBtn = document.getElementById("toggle-pro-mode");
+    const selector = document.getElementById("question-selector");
 
-    totalNumberSpan.textContent = questions.length;
+    // 建立題號按鈕
+    questions.forEach((_, idx) => {
+      const btn = document.createElement("button");
+      btn.textContent = (idx + 1);
+      btn.className = "selector-btn";
+      btn.onclick = () => {
+        stopRecordingIfNeeded();
+        currentQuestion = idx;
+        showQuestion();
+      };
+      selector.appendChild(btn);
+    });
 
-    // 🎧 建立共用 AudioContext
+    // 共用 AudioContext（用於播放放大與錄音來源）
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    let trackConnected = false;
-    let userTrackConnected = false;
 
-    function connectWithGain(element, gainValue, alreadyConnectedFlag) {
-      if (!alreadyConnectedFlag.flag) {
-        const source = audioCtx.createMediaElementSource(element);
-        const gainNode = audioCtx.createGain();
-        gainNode.gain.value = gainValue;
-        source.connect(gainNode).connect(audioCtx.destination);
-        alreadyConnectedFlag.flag = true;
+    // 只建立一次的來源與 gain node（避免重複建立）
+    let playerSource = null;
+    let playerGainNode = null;
+    let userSource = null;
+    let userGainNode = null;
+
+    // 確保播放器連線並放大（只建立一次）
+    function ensurePlayerConnected() {
+      if (!playerSource) {
+        try {
+          playerSource = audioCtx.createMediaElementSource(audioPlayer);
+          playerGainNode = audioCtx.createGain();
+          playerGainNode.gain.value = 2; // 放大 2 倍
+          playerSource.connect(playerGainNode).connect(audioCtx.destination);
+        } catch (e) {
+          // 若 createMediaElementSource 失敗（極少數跨域或重複呼叫情況），忽略並讓原生 audio 控制
+          console.warn("建立 playerSource 失敗:", e);
+        }
+      }
+    }
+
+    // 確保回放連線並放大（只建立一次）
+    function ensureUserConnected() {
+      if (!userSource) {
+        try {
+          userSource = audioCtx.createMediaElementSource(userAudio);
+          userGainNode = audioCtx.createGain();
+          userGainNode.gain.value = 2; // 放大 2 倍
+          userSource.connect(userGainNode).connect(audioCtx.destination);
+        } catch (e) {
+          console.warn("建立 userSource 失敗:", e);
+        }
       }
     }
 
@@ -77,37 +248,106 @@
 
     showQuestion();
 
-    // 🟢 確保點播放時才建立聲音管道
+    // 在播放時才 resume audioCtx 並建立放大管道（避免 autoplay 限制）
     audioPlayer.addEventListener("play", () => {
-      audioCtx.resume();
-      connectWithGain(audioPlayer, 2, { get flag() { return trackConnected; }, set flag(v) { trackConnected = v; } });
+      // user interaction -> resume
+      audioCtx.resume().catch(()=>{});
+      ensurePlayerConnected();
     });
 
+    // 當回放播放時，resume 並建立回放放大管道
     userAudio.addEventListener("play", () => {
-      audioCtx.resume();
-      connectWithGain(userAudio, 2, { get flag() { return userTrackConnected; }, set flag(v) { userTrackConnected = v; } });
+      audioCtx.resume().catch(()=>{});
+      ensureUserConnected();
     });
 
-    // Pro 模式
-    proModeBtn.addEventListener("click", () => {
+    // 高手模式切換
+    proModeBtn.onclick = () => {
       isProMode = !isProMode;
-      showQuestion();
-    });
+      proModeBtn.textContent = isProMode ? "恢復題目顯示" : "高手模式";
+      questionText.style.visibility = isProMode ? "hidden" : "visible";
+      keywordsDiv.style.visibility = isProMode ? "hidden" : "visible";
+    };
 
-    // 偽造錄音流程（示範用）
-    startBtn.addEventListener("click", () => {
+    // 錄音開始
+    startBtn.onclick = async () => {
+      // 確保 audio context 已被允許使用
+      await audioCtx.resume().catch(()=>{});
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (err) {
+        alert("無法取得麥克風權限：" + err.message);
+        return;
+      }
+
+      // 使用同一個 audioCtx 建立 MediaStreamSource 給 recorder.js
+      const input = audioCtx.createMediaStreamSource(stream);
+
+      // 確保 recorder.js 在頁面可用
+      recorder = new Recorder(input, { numChannels: 1 });
+      recorder.record();
+      isRecording = true;
+
+      // 隱藏題目（如你先前設計）
+      questionText.style.visibility = "hidden";
+
       startBtn.disabled = true;
       stopBtn.disabled = false;
-      console.log("開始錄音...");
-    });
+    };
 
-    stopBtn.addEventListener("click", () => {
+    // 錄音停止
+    stopBtn.onclick = () => {
+      if (!recorder) return;
+
+      recorder.stop();
+      isRecording = false;
+
+      // 停掉麥克風
+      if (stream && stream.getAudioTracks && stream.getAudioTracks()[0]) {
+        stream.getAudioTracks()[0].stop();
+      }
+
+      // 取得 WAV 並放到回放 audio
+      recorder.exportWAV(blob => {
+        // 釋放 recorder 內部資源（recorder.js pattern）
+        recorder.clear();
+
+        // 設定 userAudio src 並顯示
+        userAudio.src = URL.createObjectURL(blob);
+        userAudio.classList.remove("hidden");
+
+        // 不立刻 play，等使用者按播放時會 resume & 建立放大
+      });
+
+      // 根據 Pro 模式恢復題目顯示
+      questionText.style.visibility = isProMode ? "hidden" : "visible";
+
       startBtn.disabled = false;
       stopBtn.disabled = true;
-      console.log("停止錄音，生成回放...");
-      userAudio.src = "recorded.mp3"; // 假裝錄到音
-      userAudio.classList.remove("hidden");
-    });
+    };
+
+    function stopRecordingIfNeeded() {
+      if (isRecording && recorder) {
+        try {
+          recorder.stop();
+          isRecording = false;
+          if (stream && stream.getAudioTracks && stream.getAudioTracks()[0]) {
+            stream.getAudioTracks()[0].stop();
+          }
+          recorder.clear();
+        } catch (e) {
+          console.warn("停止錄音時出錯", e);
+        }
+      }
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+    }
+
+    // 切換題目時也確保停止錄音
+    //（題號按鈕已將 stopRecordingIfNeeded 呼叫在 onclick 中）
+
+    // 若需要可加入鍵盤操作、上一題/下一題按鈕等
   </script>
 </body>
 </html>
