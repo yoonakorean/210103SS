@@ -101,7 +101,7 @@
       margin: 10px 0;
     }
 
-    /* 高手模式提示置中位置 */
+    /* 高手模式提示置中 */
     .pro-mode-hint {
       margin: 15px 0 20px 0;
     }
@@ -165,6 +165,21 @@
     const startBtn = document.getElementById("start-btn");
     const stopBtn = document.getElementById("stop-btn");
     const proModeBtn = document.getElementById("toggle-pro-mode");
+
+    // 🔊 Web Audio API，讓播放器與錄音回放音量預設放大 2 倍
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // 題目播放器放大
+    const track = audioCtx.createMediaElementSource(audioPlayer);
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.value = 2; // 放大 2 倍
+    track.connect(gainNode).connect(audioCtx.destination);
+
+    // 錄音回放放大
+    const userTrack = audioCtx.createMediaElementSource(userAudio);
+    const userGainNode = audioCtx.createGain();
+    userGainNode.gain.value = 2; // 放大 2 倍
+    userTrack.connect(userGainNode).connect(audioCtx.destination);
 
     function showQuestion() {
       const q = questions[currentQuestion];
