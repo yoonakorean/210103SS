@@ -45,7 +45,7 @@
       color: #fff;
     }
 
-    /* 題目選擇按鈕 (維持圓形，但大小統一) */
+    /* 題目選擇按鈕 */
     .selector-btn {
       width: 40px;
       height: 40px;
@@ -64,7 +64,7 @@
       display: block;
     }
 
-    /* 備註字體大小統一 */
+    /* 備註字體大小 */
     .note,
     .practice-hint,
     .pro-mode-hint {
@@ -101,18 +101,9 @@
       margin: 10px 0;
     }
 
-    /* 高手模式提示置中（位於按鈕與播放器之間） */
-    .pro-mode-area {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 6px;
-    }
+    /* 高手模式提示置中位置 */
     .pro-mode-hint {
-      margin: 0;
-      padding: 6px 10px;
-      text-align: center;
+      margin: 15px 0 20px 0;
     }
   </style>
 </head>
@@ -127,10 +118,8 @@
   <div class="practice-hint">進階練習：看著關鍵字，試著說出句子</div>
   <div id="keywords" class="keywords"></div>
 
-  <div class="pro-mode-area">
-    <button id="toggle-pro-mode">高手模式</button>
-    <div class="pro-mode-hint">進入高手模式後 題目與關鍵字都會隱藏</div>
-  </div>
+  <button id="toggle-pro-mode">高手模式</button>
+  <div class="pro-mode-hint">進入高手模式後 題目與關鍵字都會隱藏</div>
 
   <div id="question-controls">
     <div class="audio-player-container">
@@ -147,11 +136,10 @@
     </div>
   </div>
 
-  <!-- 引入 recorder.js（請確保 recorder.js 在同目錄） -->
+  <!-- 引入 recorder.js -->
   <script src="recorder.js"></script>
 
   <script>
-    // 原始題庫（保留你先前提供的 10 題）
     const questions = [
       { audio: "audio/21010301S.mp3", text: "아침에 보통 커피를 마시거나 빵을 먹어요.", keywords: "아침, 커피, 빵" },
       { audio: "audio/21010302S.mp3", text: "주말에 시간이 있으면 보통 집에서 청소하거나 음악을 들어요.", keywords: "주말, 청소, 음악" },
@@ -167,11 +155,8 @@
 
     let currentQuestion = 0;
     let isProMode = false;
-    let recorder = null;
-    let stream = null;
-    let isRecording = false;
+    let recorder, audioContext, stream;
 
-    // DOM
     const questionText = document.getElementById("question-text");
     const keywordsDiv = document.getElementById("keywords");
     const currentNumberSpan = document.getElementById("current-number");
@@ -180,63 +165,11 @@
     const startBtn = document.getElementById("start-btn");
     const stopBtn = document.getElementById("stop-btn");
     const proModeBtn = document.getElementById("toggle-pro-mode");
-    const selector = document.getElementById("question-selector");
-
-    // 建立題號按鈕
-    questions.forEach((_, idx) => {
-      const btn = document.createElement("button");
-      btn.textContent = (idx + 1);
-      btn.className = "selector-btn";
-      btn.onclick = () => {
-        stopRecordingIfNeeded();
-        currentQuestion = idx;
-        showQuestion();
-      };
-      selector.appendChild(btn);
-    });
-
-    // 共用 AudioContext（用於播放放大與錄音來源）
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-    // 只建立一次的來源與 gain node（避免重複建立）
-    let playerSource = null;
-    let playerGainNode = null;
-    let userSource = null;
-    let userGainNode = null;
-
-    // 確保播放器連線並放大（只建立一次）
-    function ensurePlayerConnected() {
-      if (!playerSource) {
-        try {
-          playerSource = audioCtx.createMediaElementSource(audioPlayer);
-          playerGainNode = audioCtx.createGain();
-          playerGainNode.gain.value = 2; // 放大 2 倍
-          playerSource.connect(playerGainNode).connect(audioCtx.destination);
-        } catch (e) {
-          // 若 createMediaElementSource 失敗（極少數跨域或重複呼叫情況），忽略並讓原生 audio 控制
-          console.warn("建立 playerSource 失敗:", e);
-        }
-      }
-    }
-
-    // 確保回放連線並放大（只建立一次）
-    function ensureUserConnected() {
-      if (!userSource) {
-        try {
-          userSource = audioCtx.createMediaElementSource(userAudio);
-          userGainNode = audioCtx.createGain();
-          userGainNode.gain.value = 2; // 放大 2 倍
-          userSource.connect(userGainNode).connect(audioCtx.destination);
-        } catch (e) {
-          console.warn("建立 userSource 失敗:", e);
-        }
-      }
-    }
 
     function showQuestion() {
       const q = questions[currentQuestion];
       questionText.textContent = q.text;
-      keywordsDiv.textContent = `[${q.keywords}]`;
+      keywordsDiv.textContent = `[${q.keywords}]`; // 關鍵字加中括號
       currentNumberSpan.textContent = currentQuestion + 1;
       audioPlayer.src = q.audio;
       userAudio.classList.add("hidden");
@@ -248,49 +181,38 @@
 
     showQuestion();
 
-    // 在播放時才 resume audioCtx 並建立放大管道（避免 autoplay 限制）
-    audioPlayer.addEventListener("play", () => {
-      // user interaction -> resume
-      audioCtx.resume().catch(()=>{});
-      ensurePlayerConnected();
-    });
-
-    // 當回放播放時，resume 並建立回放放大管道
-    userAudio.addEventListener("play", () => {
-      audioCtx.resume().catch(()=>{});
-      ensureUserConnected();
+    // 題目選擇按鈕
+    const selector = document.getElementById("question-selector");
+    questions.forEach((_, idx) => {
+      const btn = document.createElement("button");
+      btn.textContent = idx + 1;
+      btn.className = "selector-btn";
+      btn.onclick = () => {
+        stopRecordingIfNeeded();
+        currentQuestion = idx;
+        showQuestion();
+      };
+      selector.appendChild(btn);
     });
 
     // 高手模式切換
     proModeBtn.onclick = () => {
       isProMode = !isProMode;
-      proModeBtn.textContent = isProMode ? "恢復題目顯示" : "高手模式";
       questionText.style.visibility = isProMode ? "hidden" : "visible";
       keywordsDiv.style.visibility = isProMode ? "hidden" : "visible";
+      proModeBtn.textContent = isProMode ? "恢復題目顯示" : "高手模式";
     };
 
     // 錄音開始
     startBtn.onclick = async () => {
-      // 確保 audio context 已被允許使用
-      await audioCtx.resume().catch(()=>{});
+      questionText.style.visibility = "hidden";
 
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (err) {
-        alert("無法取得麥克風權限：" + err.message);
-        return;
-      }
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const input = audioContext.createMediaStreamSource(stream);
 
-      // 使用同一個 audioCtx 建立 MediaStreamSource 給 recorder.js
-      const input = audioCtx.createMediaStreamSource(stream);
-
-      // 確保 recorder.js 在頁面可用
       recorder = new Recorder(input, { numChannels: 1 });
       recorder.record();
-      isRecording = true;
-
-      // 隱藏題目（如你先前設計）
-      questionText.style.visibility = "hidden";
 
       startBtn.disabled = true;
       stopBtn.disabled = false;
@@ -298,56 +220,27 @@
 
     // 錄音停止
     stopBtn.onclick = () => {
-      if (!recorder) return;
-
       recorder.stop();
-      isRecording = false;
+      stream.getAudioTracks()[0].stop();
 
-      // 停掉麥克風
-      if (stream && stream.getAudioTracks && stream.getAudioTracks()[0]) {
-        stream.getAudioTracks()[0].stop();
-      }
-
-      // 取得 WAV 並放到回放 audio
       recorder.exportWAV(blob => {
-        // 釋放 recorder 內部資源（recorder.js pattern）
-        recorder.clear();
-
-        // 設定 userAudio src 並顯示
         userAudio.src = URL.createObjectURL(blob);
         userAudio.classList.remove("hidden");
-
-        // 不立刻 play，等使用者按播放時會 resume & 建立放大
       });
 
-      // 根據 Pro 模式恢復題目顯示
       questionText.style.visibility = isProMode ? "hidden" : "visible";
-
       startBtn.disabled = false;
       stopBtn.disabled = true;
     };
 
     function stopRecordingIfNeeded() {
-      if (isRecording && recorder) {
-        try {
-          recorder.stop();
-          isRecording = false;
-          if (stream && stream.getAudioTracks && stream.getAudioTracks()[0]) {
-            stream.getAudioTracks()[0].stop();
-          }
-          recorder.clear();
-        } catch (e) {
-          console.warn("停止錄音時出錯", e);
-        }
+      if (recorder && recorder.recording) {
+        recorder.stop();
+        stream.getAudioTracks()[0].stop();
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
       }
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
     }
-
-    // 切換題目時也確保停止錄音
-    //（題號按鈕已將 stopRecordingIfNeeded 呼叫在 onclick 中）
-
-    // 若需要可加入鍵盤操作、上一題/下一題按鈕等
   </script>
 </body>
 </html>
